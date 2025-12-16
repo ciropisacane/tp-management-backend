@@ -1,5 +1,5 @@
 // Express Application Setup - VERSIONE INIZIALE
-import express, { Express } from "express";
+import express, { Express, Request, Response } from "express";
 import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
@@ -58,7 +58,7 @@ const limiter = rateLimit({
 app.use("/api/", limiter);
 
 // Health check endpoint
-app.get("/health", (req, res) => {
+app.get("/health", (req: Request, res: Response) => {
   res.status(200).json({
     status: "ok",
     timestamp: new Date().toISOString(),
@@ -67,8 +67,8 @@ app.get("/health", (req, res) => {
 });
 
 // Root endpoint (aggiungi questo)
-app.get('/', (req, res) => {
-  res.status(200).json({ 
+app.get('/', (req: Request, res: Response) => {
+  res.status(200).json({
     message: 'TP Management API is running',
     version: '1.0.0',
     endpoints: {
