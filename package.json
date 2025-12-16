@@ -4,13 +4,17 @@
   "description": "Transfer Pricing Project Management API",
   "main": "dist/server.js",
   "scripts": {
-    "dev": "ts-node src/server.ts",
+    "dev": "nodemon --exec ts-node src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
-    "prisma:seed": "ts-node prisma/seed.ts"
+    "prisma:seed": "ts-node prisma/seed.ts",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "lint": "eslint . --ext .ts",
+    "format": "prettier --write \"src/**/*.ts\""
   },
   "keywords": [
     "transfer-pricing",
@@ -20,29 +24,38 @@
   "author": "Your Company",
   "license": "MIT",
   "dependencies": {
-    "@types/node": "^20.10.5",
     "@prisma/client": "^5.7.0",
-    "axios": "^1.13.2",
+    "@types/bcrypt": "^5.0.2",
+    "@types/compression": "^1.7.5",
+    "@types/cookie-parser": "^1.4.6",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/jsonwebtoken": "^9.0.5",
+    "@types/morgan": "^1.9.9",
+    "@types/node": "^20.10.5",
     "bcrypt": "^5.1.1",
     "compression": "^1.7.4",
-    "cookie-parser": "^1.4.7",
+    "cookie-parser": "^1.4.6",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
     "express-rate-limit": "^7.1.5",
     "helmet": "^7.1.0",
-    "jsonwebtoken": "^9.0.3",
+    "jsonwebtoken": "^9.0.2",
     "morgan": "^1.10.0",
-    "multer": "^1.4.5-lts.1",
+    "prisma": "^5.7.0",
+    "typescript": "^5.3.3",
     "winston": "^3.11.0"
   },
   "devDependencies": {
-    "@types/multer": "^1.4.11",
-    "prisma": "^5.7.0",
-    "ts-node": "^10.9.2",
-    "typescript": "^5.3.3"
+    "nodemon": "^3.0.2",
+    "ts-node": "^10.9.2"
   },
   "prisma": {
     "seed": "ts-node prisma/seed.ts"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
   }
 }
