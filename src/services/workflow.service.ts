@@ -211,7 +211,7 @@ class WorkflowService {
       const avgCompletion = totalPercentage / workflow.length;
 
       // Update project status based on average completion
-      let newStatus = ProjectStatus.PLANNING;
+      let newStatus: ProjectStatus = ProjectStatus.PLANNING;
       if (avgCompletion >= 75) {
         newStatus = ProjectStatus.FINALIZATION;
       } else if (avgCompletion >= 50) {
