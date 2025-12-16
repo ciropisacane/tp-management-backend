@@ -1,0 +1,505 @@
+// Prisma Schema for Transfer Pricing Project Management System
+// Database: PostgreSQL
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// ENUMS
+// ============================================
+
+enum UserRole {
+  admin
+  partner
+  manager
+  senior
+  consultant
+  support
+}
+
+enum DeliverableType {
+  LOCAL_FILE
+  MASTER_FILE
+  BENCHMARK_ANALYSIS
+  IC_AGREEMENT
+  TP_POLICY
+  AOA_REPORT
+  TRANSACTION_REPORT
+  TP_AUDIT_SUPPORT
+  SETTLEMENT_PROCEDURE
+  APA_MAP_NEGOTIATION
+  TP_PLANNING
+  DISPUTE_RESOLUTION
+  IP_VALUATION
+  CBCR_SUPPORT
+  LF_COMMENT_REVIEW
+  MF_COMMENT_REVIEW
+}
+
+enum ProjectStatus {
+  NOT_STARTED
+  PLANNING
+  DATA_GATHERING
+  ANALYSIS
+  DRAFTING
+  INTERNAL_REVIEW
+  CLIENT_REVIEW
+  FINALIZATION
+  DELIVERED
+  ARCHIVED
+  ON_HOLD
+  WAITING_CLIENT
+  WAITING_THIRD_PARTY
+  REVISION_REQUIRED
+}
+
+enum Priority {
+  low
+  medium
+  high
+  urgent
+}
+
+enum RiskLevel {
+  low
+  medium
+  high
+}
+
+enum ProjectTeamRole {
+  project_manager
+  senior
+  consultant
+  reviewer
+  support
+}
+
+enum WorkflowStepStatus {
+  not_started
+  in_progress
+  completed
+  blocked
+}
+
+enum TaskStatus {
+  todo
+  in_progress
+  review
+  completed
+  cancelled
+}
+
+enum DocumentType {
+  input
+  workpaper
+  draft
+  final
+  agreement
+  correspondence
+  other
+}
+
+enum ReviewType {
+  technical
+  quality
+  legal
+  final
+}
+
+enum ReviewStatus {
+  pending
+  in_progress
+  completed
+  approved
+  rejected
+}
+
+enum MilestoneStatus {
+  pending
+  completed
+  missed
+}
+
+enum NotificationType {
+  deadline_approaching
+  task_assigned
+  review_requested
+  document_uploaded
+  status_change
+  comment_mention
+  other
+}
+
+enum ActivityAction {
+  created
+  updated
+  deleted
+  status_changed
+  document_uploaded
+  comment_added
+  task_completed
+}
+
+// ============================================
+// MODELS
+// ============================================
+
+model User {
+  id            String   @id @default(uuid())
+  email         String   @unique
+  passwordHash  String   @map("password_hash")
+  firstName     String   @map("first_name")
+  lastName      String   @map("last_name")
+  role          UserRole
+  hourlyRate    Decimal? @map("hourly_rate") @db.Decimal(10, 2)
+  active        Boolean  @default(true)
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  projectsManaged   Project[]       @relation("ProjectManager")
+  projectTeams      ProjectTeam[]
+  tasksAssigned     Task[]          @relation("TaskAssignee")
+  tasksCreated      Task[]          @relation("TaskCreator")
+  documentsUploaded Document[]
+  reviews           Review[]
+  comments          Comment[]
+  timeEntries       TimeEntry[]
+  notifications     Notification[]
+  activityLogs      ActivityLog[]
+  workflowSteps     ProjectWorkflow[]
+
+  @@map("users")
+}
+
+model Client {
+  id             String   @id @default(uuid())
+  name           String
+  industry       String?
+  country        String?
+  contactName    String?  @map("contact_name")
+  contactEmail   String?  @map("contact_email")
+  contactPhone   String?  @map("contact_phone")
+  billingAddress String?  @map("billing_address") @db.Text
+  notes          String?  @db.Text
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  projects Project[]
+
+  @@map("clients")
+}
+
+model Project {
+  id               String           @id @default(uuid())
+  clientId         String           @map("client_id")
+  projectName      String           @map("project_name")
+  deliverableType  DeliverableType  @map("deliverable_type")
+  status           ProjectStatus    @default(NOT_STARTED)
+  priority         Priority         @default(medium)
+  startDate        DateTime?        @map("start_date") @db.Date
+  deadline         DateTime?        @db.Date
+  estimatedHours   Int?             @map("estimated_hours")
+  actualHours      Int?             @map("actual_hours") @default(0)
+  budget           Decimal?         @db.Decimal(12, 2)
+  actualCost       Decimal?         @map("actual_cost") @db.Decimal(12, 2) @default(0)
+  projectManagerId String           @map("project_manager_id")
+  description      String?          @db.Text
+  riskLevel        RiskLevel        @map("risk_level") @default(medium)
+  createdAt        DateTime         @default(now()) @map("created_at")
+  updatedAt        DateTime         @updatedAt @map("updated_at")
+
+  // Relations
+  client            Client            @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  projectManager    User              @relation("ProjectManager", fields: [projectManagerId], references: [id])
+  projectTeam       ProjectTeam[]
+  workflow          ProjectWorkflow[]
+  tasks             Task[]
+  documents         Document[]
+  reviews           Review[]
+  comments          Comment[]
+  timeEntries       TimeEntry[]
+  milestones        Milestone[]
+  notifications     Notification[]
+  activityLogs      ActivityLog[]
+
+  @@index([clientId])
+  @@index([projectManagerId])
+  @@index([status])
+  @@index([deliverableType])
+  @@map("projects")
+}
+
+model ProjectTeam {
+  id                   String          @id @default(uuid())
+  projectId            String          @map("project_id")
+  userId               String          @map("user_id")
+  roleInProject        ProjectTeamRole @map("role_in_project")
+  allocationPercentage Int             @map("allocation_percentage") @default(0)
+  assignedDate         DateTime        @map("assigned_date") @db.Date
+
+  // Relations
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId])
+  @@index([projectId])
+  @@index([userId])
+  @@map("project_team")
+}
+
+model WorkflowTemplate {
+  id                      String  @id @default(uuid())
+  deliverableType         String  @map("deliverable_type")
+  stepSequence            Int     @map("step_sequence")
+  stepName                String  @map("step_name")
+  stepDescription         String? @map("step_description") @db.Text
+  estimatedDurationHours  Int?    @map("estimated_duration_hours")
+  requiredInputs          Json?   @map("required_inputs") // Array of strings
+  outputs                 Json?   // Array of strings
+  validationCriteria      Json?   @map("validation_criteria")
+
+  @@unique([deliverableType, stepSequence])
+  @@index([deliverableType])
+  @@map("workflow_templates")
+}
+
+model ProjectWorkflow {
+  id                   String             @id @default(uuid())
+  projectId            String             @map("project_id")
+  workflowTemplateId   String?            @map("workflow_template_id")
+  stepSequence         Int                @map("step_sequence")
+  stepName             String             @map("step_name")
+  status               WorkflowStepStatus @default(not_started)
+  assignedTo           String?            @map("assigned_to")
+  startDate            DateTime?          @map("start_date") @db.Date
+  dueDate              DateTime?          @map("due_date") @db.Date
+  completionDate       DateTime?          @map("completion_date") @db.Date
+  completionPercentage Int                @map("completion_percentage") @default(0)
+  notes                String?            @db.Text
+  createdAt            DateTime           @default(now()) @map("created_at")
+  updatedAt            DateTime           @updatedAt @map("updated_at")
+
+  // Relations
+  project   Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  assignee  User?      @relation(fields: [assignedTo], references: [id])
+  tasks     Task[]
+  documents Document[]
+  timeEntries TimeEntry[]
+
+  @@unique([projectId, stepSequence])
+  @@index([projectId])
+  @@index([assignedTo])
+  @@map("project_workflow")
+}
+
+model Task {
+  id               String      @id @default(uuid())
+  projectId        String      @map("project_id")
+  workflowStepId   String?     @map("workflow_step_id")
+  title            String
+  description      String?     @db.Text
+  assignedTo       String      @map("assigned_to")
+  createdBy        String      @map("created_by")
+  status           TaskStatus  @default(todo)
+  priority         Priority    @default(medium)
+  dueDate          DateTime?   @map("due_date") @db.Date
+  estimatedHours   Decimal?    @map("estimated_hours") @db.Decimal(6, 2)
+  actualHours      Decimal?    @map("actual_hours") @db.Decimal(6, 2) @default(0)
+  dependencies     Json?       // Array of task IDs
+  tags             Json?       // Array of strings
+  createdAt        DateTime    @default(now()) @map("created_at")
+  updatedAt        DateTime    @updatedAt @map("updated_at")
+  completedAt      DateTime?   @map("completed_at")
+
+  // Relations
+  project       Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  workflowStep  ProjectWorkflow? @relation(fields: [workflowStepId], references: [id])
+  assignee      User             @relation("TaskAssignee", fields: [assignedTo], references: [id])
+  creator       User             @relation("TaskCreator", fields: [createdBy], references: [id])
+  comments      Comment[]
+  timeEntries   TimeEntry[]
+
+  @@index([projectId])
+  @@index([workflowStepId])
+  @@index([assignedTo])
+  @@index([status])
+  @@map("tasks")
+}
+
+model Document {
+  id               String       @id @default(uuid())
+  projectId        String       @map("project_id")
+  documentName     String       @map("document_name")
+  documentType     DocumentType @map("document_type")
+  filePath         String       @map("file_path")
+  fileSize         BigInt       @map("file_size")
+  mimeType         String       @map("mime_type")
+  version          String       @default("1.0")
+  uploadedBy       String       @map("uploaded_by")
+  workflowStepId   String?      @map("workflow_step_id")
+  description      String?      @db.Text
+  tags             Json?        // Array of strings
+  isFinal          Boolean      @map("is_final") @default(false)
+  isClientFacing   Boolean      @map("is_client_facing") @default(false)
+  createdAt        DateTime     @default(now()) @map("created_at")
+  updatedAt        DateTime     @updatedAt @map("updated_at")
+
+  // Relations
+  project       Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  uploader      User             @relation(fields: [uploadedBy], references: [id])
+  workflowStep  ProjectWorkflow? @relation(fields: [workflowStepId], references: [id])
+  reviews       Review[]
+  comments      Comment[]
+
+  @@index([projectId])
+  @@index([workflowStepId])
+  @@index([uploadedBy])
+  @@map("documents")
+}
+
+model Review {
+  id              String       @id @default(uuid())
+  projectId       String       @map("project_id")
+  documentId      String?      @map("document_id")
+  reviewerId      String       @map("reviewer_id")
+  reviewType      ReviewType   @map("review_type")
+  status          ReviewStatus @default(pending)
+  comments        String?      @db.Text
+  rating          Int?         // 1-5
+  requestedDate   DateTime     @default(now()) @map("requested_date")
+  completedDate   DateTime?    @map("completed_date")
+  createdAt       DateTime     @default(now()) @map("created_at")
+  updatedAt       DateTime     @updatedAt @map("updated_at")
+
+  // Relations
+  project  Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  document Document? @relation(fields: [documentId], references: [id])
+  reviewer User      @relation(fields: [reviewerId], references: [id])
+
+  @@index([projectId])
+  @@index([documentId])
+  @@index([reviewerId])
+  @@map("reviews")
+}
+
+model Comment {
+  id              String    @id @default(uuid())
+  projectId       String    @map("project_id")
+  taskId          String?   @map("task_id")
+  documentId      String?   @map("document_id")
+  userId          String    @map("user_id")
+  parentCommentId String?   @map("parent_comment_id")
+  commentText     String    @map("comment_text") @db.Text
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  project       Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  task          Task?     @relation(fields: [taskId], references: [id])
+  document      Document? @relation(fields: [documentId], references: [id])
+  user          User      @relation(fields: [userId], references: [id])
+  parentComment Comment?  @relation("CommentThread", fields: [parentCommentId], references: [id])
+  replies       Comment[] @relation("CommentThread")
+
+  @@index([projectId])
+  @@index([taskId])
+  @@index([documentId])
+  @@index([userId])
+  @@map("comments")
+}
+
+model TimeEntry {
+  id             String   @id @default(uuid())
+  projectId      String   @map("project_id")
+  userId         String   @map("user_id")
+  taskId         String?  @map("task_id")
+  workflowStepId String?  @map("workflow_step_id")
+  date           DateTime @db.Date
+  hours          Decimal  @db.Decimal(6, 2)
+  description    String?  @db.Text
+  billable       Boolean  @default(true)
+  hourlyRate     Decimal? @map("hourly_rate") @db.Decimal(10, 2)
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  project      Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user         User             @relation(fields: [userId], references: [id])
+  task         Task?            @relation(fields: [taskId], references: [id])
+  workflowStep ProjectWorkflow? @relation(fields: [workflowStepId], references: [id])
+
+  @@index([projectId])
+  @@index([userId])
+  @@index([taskId])
+  @@index([date])
+  @@map("time_entries")
+}
+
+model Milestone {
+  id             String          @id @default(uuid())
+  projectId      String          @map("project_id")
+  milestoneName  String          @map("milestone_name")
+  dueDate        DateTime?       @map("due_date") @db.Date
+  status         MilestoneStatus @default(pending)
+  completionDate DateTime?       @map("completion_date") @db.Date
+  description    String?         @db.Text
+  createdAt      DateTime        @default(now()) @map("created_at")
+  updatedAt      DateTime        @updatedAt @map("updated_at")
+
+  // Relations
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@map("milestones")
+}
+
+model Notification {
+  id               String           @id @default(uuid())
+  userId           String           @map("user_id")
+  projectId        String?          @map("project_id")
+  notificationType NotificationType @map("notification_type")
+  title            String
+  message          String?          @db.Text
+  linkUrl          String?          @map("link_url")
+  read             Boolean          @default(false)
+  createdAt        DateTime         @default(now()) @map("created_at")
+
+  // Relations
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project Project? @relation(fields: [projectId], references: [id])
+
+  @@index([userId])
+  @@index([projectId])
+  @@index([read])
+  @@map("notifications")
+}
+
+model ActivityLog {
+  id          String         @id @default(uuid())
+  projectId   String         @map("project_id")
+  userId      String         @map("user_id")
+  actionType  ActivityAction @map("action_type")
+  entityType  String         @map("entity_type") // 'project', 'task', 'document', 'review'
+  entityId    String         @map("entity_id")
+  description String?        @db.Text
+  metadata    Json?          // Additional data about the action
+  createdAt   DateTime       @default(now()) @map("created_at")
+
+  // Relations
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id])
+
+  @@index([projectId])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("activity_log")
+}
