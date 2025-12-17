@@ -11,9 +11,9 @@ import { errorHandler, notFoundHandler } from "./middleware/error.middleware";
 
 // Import solo le routes che abbiamo creato
 import authRoutes from "./routes/auth.routes";
+import projectRoutes from './routes/projects.routes';
 
 // Le altre routes verranno aggiunte man mano che le implementiamo
-// import projectRoutes from './routes/projects.routes';
 // import taskRoutes from './routes/tasks.routes';
 // import documentRoutes from './routes/documents.routes';
 // import userRoutes from './routes/users.routes';
@@ -80,9 +80,9 @@ app.get('/', (req: Request, res: Response) => {
 
 // API Routes - Solo auth per ora
 app.use("/api/auth", authRoutes);
+app.use('/api/projects', projectRoutes);
 
 // Le altre routes verranno decommentate quando le creeremo
-// app.use('/api/projects', projectRoutes);
 // app.use('/api/tasks', taskRoutes);
 // app.use('/api/documents', documentRoutes);
 // app.use('/api/users', userRoutes);
