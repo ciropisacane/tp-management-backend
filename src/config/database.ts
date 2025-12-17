@@ -1,17 +1,36 @@
-// Database configuration and Prisma Client setup
+import dotenv from 'dotenv';
 import { PrismaClient } from '@prisma/client';
 
-// Create Prisma Client instance
+dotenv.config();
+
+const buildDatabaseUrl = (): string => {
+  const rawUrl = process.env.DATABASE_URL?.trim();
+
+  if (!rawUrl) {
+    throw new Error('DATABASE_URL is not set. Please configure your PostgreSQL connection string.');
+  }
+
+  if (process.env.NODE_ENV === 'production' && !/sslmode=/i.test(rawUrl)) {
+    const separator = rawUrl.includes('?') ? '&' : '?';
+    return `${rawUrl}${separator}sslmode=require`;
+  }
+
+  return rawUrl;
+};
+
+const databaseUrl = buildDatabaseUrl();
+
 const prisma = new PrismaClient({
-  log: process.env.NODE_ENV === 'development' 
+  datasources: {
+    db: { url: databaseUrl },
+  },
+  log: process.env.NODE_ENV === 'development'
     ? ['query', 'error', 'warn']
     : ['error'],
 });
 
-// Export the prisma instance
 export { prisma };
 
-// Connection test function
 export const testDatabaseConnection = async (): Promise<boolean> => {
   try {
     await prisma.$connect();
@@ -23,7 +42,6 @@ export const testDatabaseConnection = async (): Promise<boolean> => {
   }
 };
 
-// Graceful shutdown
 process.on('beforeExit', async () => {
   await prisma.$disconnect();
   console.log('Prisma Client disconnected');
