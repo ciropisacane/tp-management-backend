@@ -10,7 +10,23 @@ const buildDatabaseUrl = (): string => {
     throw new Error('DATABASE_URL is not set. Please configure your PostgreSQL connection string.');
   }
 
-  if (process.env.NODE_ENV === 'production' && !/sslmode=/i.test(rawUrl)) {
+  let url: URL;
+
+  try {
+    url = new URL(rawUrl);
+  } catch (error) {
+    console.warn('DATABASE_URL is not a valid URL. Falling back to raw string.', error);
+    return rawUrl;
+  }
+
+  const host = url.hostname.toLowerCase();
+  const isLocalHost = ['localhost', '127.0.0.1'].includes(host);
+  const requiresSSL =
+    process.env.NODE_ENV === 'production' ||
+    process.env.FORCE_SSL === 'true' ||
+    (!isLocalHost && !/sslmode=/i.test(rawUrl));
+
+  if (requiresSSL && !/sslmode=/i.test(rawUrl)) {
     const separator = rawUrl.includes('?') ? '&' : '?';
     return `${rawUrl}${separator}sslmode=require`;
   }
