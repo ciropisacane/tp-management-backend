@@ -21,17 +21,39 @@ const buildDatabaseUrl = (): string => {
 
   const host = url.hostname.toLowerCase();
   const isLocalHost = ['localhost', '127.0.0.1'].includes(host);
+
+  const addParamIfMissing = (key: string, value: string) => {
+    if (!url.searchParams.has(key)) {
+      url.searchParams.set(key, value);
+    }
+  };
+
   const requiresSSL =
     process.env.NODE_ENV === 'production' ||
     process.env.FORCE_SSL === 'true' ||
     (!isLocalHost && !/sslmode=/i.test(rawUrl));
 
-  if (requiresSSL && !/sslmode=/i.test(rawUrl)) {
-    const separator = rawUrl.includes('?') ? '&' : '?';
-    return `${rawUrl}${separator}sslmode=require`;
+  if (requiresSSL) {
+    addParamIfMissing('sslmode', 'require');
   }
 
-  return rawUrl;
+  // PgBouncer compatibility for hosted PostgreSQL providers (e.g. Render/Neon/Supabase)
+  const shouldUsePgBouncer =
+    process.env.USE_PGBOUNCER === 'true' ||
+    process.env.RENDER === 'true' ||
+    /render\.com$/i.test(host);
+
+  if (shouldUsePgBouncer) {
+    addParamIfMissing('pgbouncer', 'true');
+    addParamIfMissing('connection_limit', process.env.PG_CONNECTION_LIMIT ?? '1');
+    addParamIfMissing('pool_timeout', process.env.PG_POOL_TIMEOUT ?? '30');
+    addParamIfMissing('connect_timeout', process.env.PG_CONNECT_TIMEOUT ?? '30');
+  }
+
+  const sanitizedUrl = url.toString().replace(/:\/\/[^:/]*:[^@]*@/, '://****:****@');
+  console.info(`Using database URL: ${sanitizedUrl}`);
+
+  return url.toString();
 };
 
 const databaseUrl = buildDatabaseUrl();
