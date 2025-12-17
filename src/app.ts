@@ -25,6 +25,10 @@ import projectRoutes from './routes/projects.routes';
 
 const app: Express = express();
 
+// Trust the first proxy to correctly read X-Forwarded-* headers in hosted environments
+// (required for express-rate-limit to identify clients behind a load balancer)
+app.set("trust proxy", 1);
+
 // Security middleware
 app.use(helmet());
 
