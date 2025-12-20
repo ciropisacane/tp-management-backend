@@ -33,11 +33,42 @@ app.set("trust proxy", 1);
 app.use(helmet());
 
 // CORS configuration
+const allowedOrigins = [
+  'http://localhost:3000',
+  'http://localhost:5173',
+  'http://localhost:5174',
+  'https://stackblitz.io',
+  /^https:\/\/.*\.stackblitz\.io$/,
+  /^https:\/\/.*\.webcontainer\.io$/,
+  /^https:\/\/.*\.local\.webcontainer\.io$/
+];
+
 app.use(
   cors({
-    origin: process.env.CORS_ORIGIN || "http://localhost:3000",
+    origin: (origin, callback) => {
+      // Allow requests with no origin (mobile apps, Postman, etc.)
+      if (!origin) return callback(null, true);
+      
+      // Check if origin is allowed
+      const isAllowed = allowedOrigins.some(allowed => {
+        if (typeof allowed === 'string') {
+          return allowed === origin;
+        }
+        return allowed.test(origin);
+      });
+      
+      if (isAllowed) {
+        callback(null, true);
+      } else {
+        console.warn('🚫 CORS blocked origin:', origin);
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     credentials: true,
-  }),
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    exposedHeaders: ['Content-Range', 'X-Content-Range']
+  })
 );
 
 // Request logging
