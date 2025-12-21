@@ -1,10 +1,10 @@
-// Backend: src/routes/clientRoutes.ts
-import express from 'express';
-import * as clientController from '../controllers/clientController';
-import { authenticate } from '../middleware/auth';
-import { validateCreateClient, validateUpdateClient } from '../validators/clientValidator';
+// Backend: src/routes/client.routes.ts
+import { Router } from 'express';
+import { clientController } from '../controllers/client.controller';
+import { authenticate, authorize } from '../middleware/auth.middleware';
+import { validateCreateClient, validateUpdateClient } from '../validators/client.validator';
 
-const router = express.Router();
+const router = Router();
 
 // All routes require authentication
 router.use(authenticate);
