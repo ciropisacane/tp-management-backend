@@ -1,4 +1,4 @@
-// Backend: src/validators/clientValidator.ts
+// Backend: src/validators/client.validator.ts
 import { Request, Response, NextFunction } from 'express';
 
 /**
@@ -31,6 +31,7 @@ export const validateCreateClient = (
 
   if (errors.length > 0) {
     return res.status(400).json({
+      success: false,
       error: 'Validation failed',
       errors
     });
@@ -71,6 +72,7 @@ export const validateUpdateClient = (
 
   if (errors.length > 0) {
     return res.status(400).json({
+      success: false,
       error: 'Validation failed',
       errors
     });
