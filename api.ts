@@ -5,8 +5,10 @@ import axios, {
   InternalAxiosRequestConfig,
 } from "axios";
 
-const API_BASE_URL =
-  process.env.REACT_APP_API_URL || "http://localhost:5000/api";
+// ✅ FIXED: Use Vite environment variable
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+
+console.log('🔗 API Base URL:', API_BASE_URL); // Debug log
 
 // Create axios instance
 const api: AxiosInstance = axios.create({
@@ -60,9 +62,16 @@ api.interceptors.response.use(
         }
         return api(originalRequest);
       } catch (refreshError) {
-        // Refresh failed - redirect to login
+        // ✅ FIXED: Emit logout event + redirect
+        console.log('🔐 Session expired - logging out');
         localStorage.removeItem("accessToken");
+        
+        // Dispatch custom event for authStore to handle
+        window.dispatchEvent(new Event('auth:logout'));
+        
+        // Redirect to login
         window.location.href = "/login";
+        
         return Promise.reject(refreshError);
       }
     }
@@ -93,6 +102,9 @@ export interface PaginatedResponse<T> {
 
 // Error handler utility
 export const handleApiError = (error: any): string => {
+  if (error.response?.data?.error) {
+    return error.response.data.error;
+  }
   if (error.response?.data?.message) {
     return error.response.data.message;
   }
