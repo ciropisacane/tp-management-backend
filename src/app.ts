@@ -117,6 +117,7 @@ app.get('/', (req: Request, res: Response) => {
 app.use("/api/auth", authRoutes);
 app.use('/api/projects', projectRoutes);
 app.use('/api/tasks', taskRoutes);
+app.use('/api/clients', clientRoutes);
 
 // Le altre routes verranno decommentate quando le creeremo
 // app.use('/api/documents', documentRoutes);
