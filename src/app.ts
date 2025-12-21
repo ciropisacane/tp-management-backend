@@ -13,7 +13,7 @@ import { errorHandler, notFoundHandler } from "./middleware/error.middleware";
 import authRoutes from "./routes/auth.routes";
 import projectRoutes from './routes/projects.routes';
 import taskRoutes from './routes/tasks.routes';
-import clientRoutes from './routes/clients.routes';
+import type clientRoutes from './routes/clients.routes';
 
 // Le altre routes verranno aggiunte man mano che le implementiamo
 // import documentRoutes from './routes/documents.routes';
