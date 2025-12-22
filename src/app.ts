@@ -14,6 +14,7 @@ import authRoutes from "./routes/auth.routes";
 import projectRoutes from './routes/projects.routes';
 import taskRoutes from './routes/tasks.routes';
 import clientRoutes from './routes/clients.routes';
+import dashboardRoutes from './routes/dashboard.routes';
 
 // Le altre routes verranno aggiunte man mano che le implementiamo
 // import documentRoutes from './routes/documents.routes';
@@ -118,6 +119,7 @@ app.use("/api/auth", authRoutes);
 app.use('/api/projects', projectRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/clients', clientRoutes);
+app.use('/api/dashboard', dashboardRoutes);
 
 // Le altre routes verranno decommentate quando le creeremo
 // app.use('/api/documents', documentRoutes);
