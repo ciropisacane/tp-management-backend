@@ -15,10 +15,10 @@ import projectRoutes from './routes/projects.routes';
 import taskRoutes from './routes/tasks.routes';
 import clientRoutes from './routes/clients.routes';
 import dashboardRoutes from './routes/dashboard.routes';
+import userRoutes from './routes/users.routes';
 
 // Le altre routes verranno aggiunte man mano che le implementiamo
 // import documentRoutes from './routes/documents.routes';
-// import userRoutes from './routes/users.routes';
 // import reviewRoutes from './routes/reviews.routes';
 // import timeRoutes from './routes/time.routes';
 // import reportRoutes from './routes/reports.routes';
@@ -120,10 +120,10 @@ app.use('/api/projects', projectRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/clients', clientRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/users', userRoutes);
 
 // Le altre routes verranno decommentate quando le creeremo
 // app.use('/api/documents', documentRoutes);
-// app.use('/api/users', userRoutes);
 // app.use('/api/reviews', reviewRoutes);
 // app.use('/api/time-entries', timeRoutes);
 // app.use('/api/reports', reportRoutes);
