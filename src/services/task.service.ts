@@ -55,6 +55,10 @@ class TaskService {
    * Create a new task
    */
   async createTask(input: CreateTaskInput, createdBy: string) {
+    if (!input.assignedTo) {
+      throw new ValidationError('Assigned user is required');
+    }
+
     // Validate project exists
     const project = await prisma.project.findUnique({
       where: { id: input.projectId },
