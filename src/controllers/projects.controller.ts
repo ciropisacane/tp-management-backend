@@ -3,7 +3,13 @@ import { Request, Response } from 'express';
 import { projectService } from '../services/project.service';
 import { workflowService } from '../services/workflow.service';
 import { asyncHandler } from '../middleware/error.middleware';
-import { DeliverableType, ProjectStatus, Priority } from '@prisma/client';
+import {
+  DeliverableType,
+  ProjectStatus,
+  Priority,
+  WorkflowStepStatus,
+} from '@prisma/client';
+import { prisma } from '../config/database';
 
 class ProjectsController {
   /**
@@ -219,7 +225,96 @@ class ProjectsController {
    * Get workflow progress
    */
   getWorkflowProgress = asyncHandler(async (req: Request, res: Response) => {
-    const progress = await workflowService.getWorkflowProgress(req.params.id);
+    const { id } = req.params;
+
+    const workflow = await prisma.projectWorkflow.findMany({
+      where: { projectId: id },
+      orderBy: { stepSequence: 'asc' },
+    });
+
+    if (workflow.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Workflow not found for this project',
+      });
+    }
+
+    const totalSteps = workflow.length;
+    const completedSteps = workflow.filter(
+      step => step.status === WorkflowStepStatus.completed
+    ).length;
+    const inProgressSteps = workflow.filter(
+      step => step.status === WorkflowStepStatus.in_progress
+    ).length;
+    const notStartedSteps = workflow.filter(
+      step => step.status === WorkflowStepStatus.not_started
+    ).length;
+    const blockedSteps = workflow.filter(
+      step => step.status === WorkflowStepStatus.blocked
+    ).length;
+
+    const percentComplete =
+      totalSteps > 0 ? Math.round((completedSteps / totalSteps) * 100) : 0;
+
+    const inProgressStep = workflow.find(
+      step => step.status === WorkflowStepStatus.in_progress
+    );
+
+    let estimatedCompletionDate: string | null = null;
+    let isOnTrack = true;
+
+    if (inProgressStep && inProgressStep.startDate) {
+      const startDate = new Date(inProgressStep.startDate);
+      const estimatedDays = inProgressStep.dueDate
+        ? Math.max(
+            0,
+            Math.ceil(
+              (inProgressStep.dueDate.getTime() - startDate.getTime()) /
+                (1000 * 60 * 60 * 24)
+            )
+          )
+        : null;
+
+      if (estimatedDays !== null) {
+        const estimatedEnd = new Date(startDate);
+        estimatedEnd.setDate(estimatedEnd.getDate() + estimatedDays);
+
+        const now = new Date();
+        const daysElapsed = Math.floor(
+          (now.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)
+        );
+
+        isOnTrack = daysElapsed <= estimatedDays;
+
+        const remainingDays = workflow
+          .filter(step => step.stepSequence > inProgressStep.stepSequence)
+          .map(step => {
+            if (!step.startDate || !step.dueDate) return 0;
+            return Math.max(
+              0,
+              Math.ceil(
+                (step.dueDate.getTime() - step.startDate.getTime()) /
+                  (1000 * 60 * 60 * 24)
+              )
+            );
+          })
+          .reduce((sum, days) => sum + days, 0);
+
+        estimatedEnd.setDate(estimatedEnd.getDate() + remainingDays);
+        estimatedCompletionDate = estimatedEnd.toISOString();
+      }
+    }
+
+    const progress = {
+      totalSteps,
+      completedSteps,
+      inProgressSteps,
+      notStartedSteps,
+      blockedSteps,
+      percentComplete,
+      estimatedCompletionDate,
+      isOnTrack,
+    };
 
     res.json({
       success: true,
