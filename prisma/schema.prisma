@@ -301,6 +301,30 @@ model ProjectWorkflow {
   @@map("project_workflow")
 }
 
+model ProjectWorkflowStep {
+  id                  String   @id @default(uuid())
+  projectWorkflowId   String
+  templateStepId      String
+  stepName            String
+  description         String?
+  order               Int
+  status              WorkflowStepStatus @default(not_started)
+  assignedToId        String?
+  startDate           DateTime?
+  completedDate       DateTime?
+  estimatedDays       Int?
+  actualDays          Float?
+  notes               String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  projectWorkflow ProjectWorkflow       @relation(fields: [projectWorkflowId], references: [id], onDelete: Cascade)
+  templateStep    WorkflowTemplateStep  @relation(fields: [templateStepId], references: [id])
+  assignedTo      User?                 @relation(fields: [assignedToId], references: [id])
+
+  @@map("project_workflow_steps")
+}
+
 model Task {
   id               String      @id @default(uuid())
   projectId        String      @map("project_id")
