@@ -21,8 +21,13 @@ router.post('/:id/status', authorize('manager', 'partner', 'admin'), projectsCon
 
 // Workflow
 router.get('/:id/workflow', projectsController.getProjectWorkflow);
-router.put('/:id/workflow/:stepId', authorize('manager', 'partner', 'admin'), projectsController.updateWorkflowStep);
-router.get('/:id/progress', projectsController.getWorkflowProgress);
+// Keep progress route before :stepId to avoid route conflicts
+router.get('/:id/workflow/progress', projectsController.getWorkflowProgress);
+router.put(
+  '/:id/workflow/:stepId',
+  authorize('manager', 'partner', 'admin'),
+  projectsController.updateWorkflowStep
+);
 
 // Statistics
 router.get('/:id/stats', projectsController.getProjectStats);
