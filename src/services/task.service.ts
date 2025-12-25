@@ -8,7 +8,7 @@ export interface CreateTaskInput {
   workflowStepId?: string;
   title: string;
   description?: string;
-  assignedTo: string;
+  assignedTo?: string; // 🆕 FIXED: Made optional (removed required)
   status?: TaskStatus;
   priority?: Priority;
   dueDate?: Date;
@@ -55,9 +55,10 @@ class TaskService {
    * Create a new task
    */
   async createTask(input: CreateTaskInput, createdBy: string) {
-    if (!input.assignedTo) {
-      throw new ValidationError('Assigned user is required');
-    }
+    // 🆕 FIXED: Removed assignedTo required validation
+    // if (!input.assignedTo) {
+    //   throw new ValidationError('Assigned user is required');
+    // }
 
     // Validate project exists
     const project = await prisma.project.findUnique({
@@ -68,13 +69,15 @@ class TaskService {
       throw new ValidationError('Project not found');
     }
 
-    // Validate assigned user exists
-    const assignedUser = await prisma.user.findUnique({
-      where: { id: input.assignedTo },
-    });
+    // 🆕 FIXED: Only validate assigned user if provided
+    if (input.assignedTo) {
+      const assignedUser = await prisma.user.findUnique({
+        where: { id: input.assignedTo },
+      });
 
-    if (!assignedUser) {
-      throw new ValidationError('Assigned user not found');
+      if (!assignedUser) {
+        throw new ValidationError('Assigned user not found');
+      }
     }
 
     // Validate workflow step if provided
@@ -109,7 +112,7 @@ class TaskService {
         workflowStepId: input.workflowStepId,
         title: input.title,
         description: input.description,
-        assignedTo: input.assignedTo,
+        assignedTo: input.assignedTo || null, // 🆕 FIXED: Allow null
         createdBy,
         status: input.status || TaskStatus.todo,
         priority: input.priority || Priority.medium,
@@ -162,8 +165,8 @@ class TaskService {
       },
     });
 
-    // Create notification for assigned user
-    if (input.assignedTo !== createdBy) {
+    // 🆕 FIXED: Create notification only if assigned user exists and is different from creator
+    if (input.assignedTo && input.assignedTo !== createdBy) {
       await prisma.notification.create({
         data: {
           userId: input.assignedTo,
