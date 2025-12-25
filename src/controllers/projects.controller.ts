@@ -22,6 +22,11 @@ class ProjectsController {
       req.user!.userId
     );
 
+    await workflowService.createProjectWorkflow(
+      project.id,
+      project.deliverableType
+    );
+
     res.status(201).json({
       success: true,
       data: project,
