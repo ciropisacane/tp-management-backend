@@ -10,7 +10,30 @@ class TasksController {
    * Create a new task
    */
   createTask = asyncHandler(async (req: Request, res: Response) => {
-    const task = await taskService.createTask(req.body, req.user!.userId);
+    const dueDate = req.body.dueDate ? new Date(req.body.dueDate) : undefined;
+
+    const taskInput = {
+      projectId: req.body.projectId,
+      workflowStepId: req.body.workflowStepId || undefined,
+      title: req.body.title,
+      description: req.body.description || undefined,
+      assignedTo: req.body.assignedTo || undefined,
+      status: req.body.status,
+      priority: req.body.priority,
+      dueDate: dueDate && !isNaN(dueDate.getTime()) ? dueDate : undefined,
+      estimatedHours:
+        req.body.estimatedHours === undefined || req.body.estimatedHours === ''
+          ? undefined
+          : Number(req.body.estimatedHours),
+      dependencies: Array.isArray(req.body.dependencies)
+        ? req.body.dependencies.filter((id: string) => id && id.trim() !== '')
+        : undefined,
+      tags: Array.isArray(req.body.tags)
+        ? req.body.tags.filter((tag: string) => tag && tag.trim() !== '')
+        : undefined,
+    };
+
+    const task = await taskService.createTask(taskInput, req.user!.userId);
 
     res.status(201).json({
       success: true,
@@ -80,9 +103,34 @@ class TasksController {
    * Update task
    */
   updateTask = asyncHandler(async (req: Request, res: Response) => {
+    const dueDate = req.body.dueDate ? new Date(req.body.dueDate) : undefined;
+
+    const updateInput = {
+      title: req.body.title,
+      description: req.body.description,
+      assignedTo: req.body.assignedTo || undefined,
+      status: req.body.status,
+      priority: req.body.priority,
+      dueDate: dueDate && !isNaN(dueDate.getTime()) ? dueDate : undefined,
+      estimatedHours:
+        req.body.estimatedHours === undefined || req.body.estimatedHours === ''
+          ? undefined
+          : Number(req.body.estimatedHours),
+      actualHours:
+        req.body.actualHours === undefined || req.body.actualHours === ''
+          ? undefined
+          : Number(req.body.actualHours),
+      dependencies: Array.isArray(req.body.dependencies)
+        ? req.body.dependencies.filter((id: string) => id && id.trim() !== '')
+        : undefined,
+      tags: Array.isArray(req.body.tags)
+        ? req.body.tags.filter((tag: string) => tag && tag.trim() !== '')
+        : undefined,
+    };
+
     const task = await taskService.updateTask(
       req.params.id,
-      req.body,
+      updateInput,
       req.user!.userId
     );
 
