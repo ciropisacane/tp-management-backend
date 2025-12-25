@@ -2,7 +2,6 @@
 import { prisma } from '../config/database';
 import { DeliverableType, ProjectStatus, Priority, RiskLevel, Prisma } from '@prisma/client';
 import { NotFoundError, ValidationError, ForbiddenError } from '../utils/errors';
-import { workflowService } from './workflow.service';
 
 export interface CreateProjectInput {
   clientId: string;
@@ -135,9 +134,6 @@ class ProjectService {
         })),
       });
     }
-
-    // Create workflow steps based on deliverable type
-    await workflowService.createProjectWorkflow(project.id, input.deliverableType);
 
     // Create activity log
     await prisma.activityLog.create({
