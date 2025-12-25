@@ -2,6 +2,7 @@
 import { prisma } from '../config/database';
 import { DeliverableType, ProjectStatus, Priority, RiskLevel, Prisma } from '@prisma/client';
 import { NotFoundError, ValidationError, ForbiddenError } from '../utils/errors';
+import { workflowService } from './workflow.service';
 
 export interface CreateProjectInput {
   clientId: string;
