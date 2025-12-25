@@ -112,7 +112,7 @@ class TaskService {
         workflowStepId: input.workflowStepId,
         title: input.title,
         description: input.description,
-        assignedTo: input.assignedTo ?? undefined,
+        ...(input.assignedTo ? { assignedTo: input.assignedTo } : {}),
         createdBy,
         status: input.status || TaskStatus.todo,
         priority: input.priority || Priority.medium,
