@@ -91,8 +91,19 @@ export const createUser = async (
   next: NextFunction
 ) => {
   try {
-    const { email, password, firstName, lastName, role, hourlyRate } = req.body;
+    const {
+      email,
+      password,
+      firstName,
+      lastName,
+      role: rawRole,
+      hourlyRate: rawHourlyRate,
+    } = req.body;
     const errors: string[] = [];
+
+    const normalizedRole =
+      typeof rawRole === 'string' ? rawRole.toLowerCase().trim() : rawRole;
+    const normalizedHourlyRate = rawHourlyRate === '' ? undefined : rawHourlyRate;
 
     if (!email || typeof email !== 'string') {
       errors.push('Email is required');
@@ -115,18 +126,18 @@ export const createUser = async (
       errors.push('Last name is required');
     }
 
-    if (role && !Object.values(UserRole).includes(role)) {
+    if (normalizedRole && !Object.values(UserRole).includes(normalizedRole)) {
       errors.push('Role is not valid');
     }
 
-    let normalizedHourlyRate: number | undefined = undefined;
+    let hourlyRateValue: number | undefined = undefined;
 
-    if (hourlyRate !== undefined && hourlyRate !== null) {
-      const rateNumber = Number(hourlyRate);
+    if (normalizedHourlyRate !== undefined && normalizedHourlyRate !== null) {
+      const rateNumber = Number(normalizedHourlyRate);
       if (Number.isNaN(rateNumber) || rateNumber < 0) {
         errors.push('Hourly rate must be a positive number');
       } else {
-        normalizedHourlyRate = rateNumber;
+        hourlyRateValue = rateNumber;
       }
     }
 
@@ -159,8 +170,8 @@ export const createUser = async (
         passwordHash,
         firstName: firstName.trim(),
         lastName: lastName.trim(),
-        role: role || UserRole.consultant,
-        hourlyRate: normalizedHourlyRate,
+        role: (normalizedRole as UserRole) || UserRole.consultant,
+        hourlyRate: hourlyRateValue,
       },
       select: {
         id: true,
