@@ -45,7 +45,16 @@ class WorkflowService {
    * Get workflow steps for a project
    */
   async getProjectWorkflow(projectId: string) {
-    const workflow = await prisma.projectWorkflow.findMany({
+    const project = await prisma.project.findUnique({
+      where: { id: projectId },
+      select: { deliverableType: true },
+    });
+
+    if (!project) {
+      throw new NotFoundError('Project not found');
+    }
+
+    let workflow = await prisma.projectWorkflow.findMany({
       where: { projectId },
       orderBy: { stepSequence: 'asc' },
       include: {
@@ -59,6 +68,46 @@ class WorkflowService {
         },
       },
     });
+
+    // Create workflow from templates if none exists yet
+    if (workflow.length === 0) {
+      const templates = await prisma.workflowTemplate.findMany({
+        where: { deliverableType: project.deliverableType.toString() },
+        orderBy: { stepSequence: 'asc' },
+      });
+
+      if (templates.length === 0) {
+        throw new NotFoundError(
+          `No workflow templates found for deliverable type: ${project.deliverableType}`
+        );
+      }
+
+      await prisma.projectWorkflow.createMany({
+        data: templates.map(template => ({
+          projectId,
+          workflowTemplateId: template.id,
+          stepSequence: template.stepSequence,
+          stepName: template.stepName,
+          status: WorkflowStepStatus.not_started,
+          completionPercentage: 0,
+        })),
+      });
+
+      workflow = await prisma.projectWorkflow.findMany({
+        where: { projectId },
+        orderBy: { stepSequence: 'asc' },
+        include: {
+          assignee: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+            },
+          },
+        },
+      });
+    }
 
     return workflow;
   }
