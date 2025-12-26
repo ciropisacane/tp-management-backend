@@ -240,9 +240,6 @@ class ProjectService {
   async getProjects(
     filters: ProjectFilters,
     pagination: PaginationOptions,
-    filters: ProjectFilters,
-    filters: ProjectFilters,
-    pagination: PaginationOptions,
     userId: string,
     userRole: string,
     organizationId: string
