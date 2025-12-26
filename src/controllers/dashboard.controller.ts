@@ -9,7 +9,7 @@ class DashboardController {
    * Get dashboard statistics
    */
   getStats = asyncHandler(async (req: Request, res: Response) => {
-    const userId = req.user!.userId;
+    const userId = req.user!.id;
 
     const stats = await dashboardService.getStats(userId);
 
@@ -24,7 +24,7 @@ class DashboardController {
    * Get user activity
    */
   getActivity = asyncHandler(async (req: Request, res: Response) => {
-    const userId = req.user!.userId;
+    const userId = req.user!.id;
     const days = parseInt(req.query.days as string) || 7;
 
     const activity = await dashboardService.getActivity(userId, days);
