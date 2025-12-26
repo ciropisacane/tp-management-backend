@@ -11,6 +11,7 @@ class ClientController {
   getAllClients = asyncHandler(async (req: Request, res: Response) => {
     const { active } = req.query;
     const activeOnly = active === 'true' || active === undefined;
+    const organizationId = req.user!.organizationId;
 
     const clients = await clientService.getAllClients(organizationId, activeOnly);
 
