@@ -164,8 +164,13 @@ export const createUser = async (
 
     const passwordHash = await bcrypt.hash(password, authConfig.bcryptSaltRounds);
 
+    // For now, assign new user to the creator's organization
+    // In a full multi-tenant system, this might need more logic
+    const organizationId = req.user?.organizationId;
+
     const user = await prisma.user.create({
       data: {
+        organizationId: organizationId!,  // Assumes authenticated admin creation
         email: normalizedEmail,
         passwordHash,
         firstName: firstName.trim(),
