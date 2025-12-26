@@ -1,0 +1,1 @@
+{"level":"error","message":"Failed to start server: Failed to connect to database","service":"tp-management-api","stack":"Error: Failed to connect to database\n    at startServer (C:\\Cartella software\\tp-tracker-web\\claude project\\tp-management-backend\\src\\server.ts:15:13)","timestamp":"2025-12-26 19:16:51"}
