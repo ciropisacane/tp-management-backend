@@ -71,7 +71,7 @@ class TasksController {
     const result = await taskService.getTasks(
       filters,
       pagination,
-      req.user!.userId,
+      req.user!.id,
       req.user!.role
     );
 
@@ -89,7 +89,7 @@ class TasksController {
   getTaskById = asyncHandler(async (req: Request, res: Response) => {
     const task = await taskService.getTaskById(
       req.params.id,
-      req.user!.userId,
+      req.user!.id,
       req.user!.role
     );
 
@@ -132,7 +132,7 @@ class TasksController {
     const task = await taskService.updateTask(
       req.params.id,
       updateInput,
-      req.user!.userId
+      req.user!.id
     );
 
     res.json({
@@ -147,7 +147,7 @@ class TasksController {
    * Delete task
    */
   deleteTask = asyncHandler(async (req: Request, res: Response) => {
-    const result = await taskService.deleteTask(req.params.id, req.user!.userId);
+    const result = await taskService.deleteTask(req.params.id, req.user!.id);
 
     res.json({
       success: true,
@@ -160,7 +160,7 @@ class TasksController {
    * Get current user's tasks
    */
   getMyTasks = asyncHandler(async (req: Request, res: Response) => {
-    const tasks = await taskService.getMyTasks(req.user!.userId);
+    const tasks = await taskService.getMyTasks(req.user!.id);
 
     res.json({
       success: true,
