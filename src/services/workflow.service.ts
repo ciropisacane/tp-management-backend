@@ -20,9 +20,18 @@ class WorkflowService {
         return;
       }
 
+      // Get Project's Organization ID
+      const project = await prisma.project.findUnique({
+        where: { id: projectId },
+        select: { organizationId: true }
+      });
+
+      if (!project) throw new NotFoundError('Project not found');
+
       // Create workflow steps from templates
       const workflowSteps = templates.map(template => ({
         projectId,
+        organizationId: project.organizationId,
         workflowTemplateId: template.id,
         stepSequence: template.stepSequence,
         stepName: template.stepName,
@@ -47,7 +56,7 @@ class WorkflowService {
   async getProjectWorkflow(projectId: string) {
     const project = await prisma.project.findUnique({
       where: { id: projectId },
-      select: { deliverableType: true },
+      select: { deliverableType: true, organizationId: true },
     });
 
     if (!project) {
@@ -85,6 +94,7 @@ class WorkflowService {
       await prisma.projectWorkflow.createMany({
         data: templates.map(template => ({
           projectId,
+          organizationId: project.organizationId,
           workflowTemplateId: template.id,
           stepSequence: template.stepSequence,
           stepName: template.stepName,
@@ -319,12 +329,12 @@ class WorkflowService {
       const startDate = new Date(inProgressStep.startDate);
       const estimatedDays = inProgressStep.dueDate
         ? Math.max(
-            0,
-            Math.ceil(
-              (inProgressStep.dueDate.getTime() - startDate.getTime()) /
-                (1000 * 60 * 60 * 24)
-            )
+          0,
+          Math.ceil(
+            (inProgressStep.dueDate.getTime() - startDate.getTime()) /
+            (1000 * 60 * 60 * 24)
           )
+        )
         : null;
 
       if (estimatedDays !== null) {
@@ -347,7 +357,7 @@ class WorkflowService {
               0,
               Math.ceil(
                 (step.dueDate.getTime() - step.startDate.getTime()) /
-                  (1000 * 60 * 60 * 24)
+                (1000 * 60 * 60 * 24)
               )
             );
           })
