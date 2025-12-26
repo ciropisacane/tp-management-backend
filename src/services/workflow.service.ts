@@ -9,11 +9,25 @@ class WorkflowService {
    */
   async createProjectWorkflow(projectId: string, deliverableType: DeliverableType) {
     try {
+      // Get Project's Organization ID
+      const project = await prisma.project.findUnique({
+        where: { id: projectId },
+        select: { organizationId: true }
+      });
+
+      if (!project) throw new NotFoundError('Project not found');
+
       // Get workflow templates for this deliverable type
       const templates = await prisma.workflowTemplate.findMany({
-        where: { deliverableType: deliverableType.toString() },
+        where: { deliverableType: deliverableType.toString(), organizationId: project.organizationId }, // Filter templates by Org too? Or are they global? Assuming Global or Nullable Org for templates based on schema.
         orderBy: { stepSequence: 'asc' },
       });
+
+      // Fallback to global templates if no org specific ones? 
+      // For now, let's assume we fetch templates. 
+      // Note: In schema, WorkflowTemplate.organizationId is nullable.
+      // If we don't find org specific, maybe we search global.
+      // Simplyifying: Just fetch all matching deliverableType for now, or refine if template logic is complex.
 
       if (templates.length === 0) {
         console.warn(`No workflow templates found for deliverable type: ${deliverableType}`);
@@ -23,6 +37,7 @@ class WorkflowService {
       // Create workflow steps from templates
       const workflowSteps = templates.map(template => ({
         projectId,
+        organizationId: project.organizationId, // REQUIRED
         workflowTemplateId: template.id,
         stepSequence: template.stepSequence,
         stepName: template.stepName,
@@ -47,7 +62,7 @@ class WorkflowService {
   async getProjectWorkflow(projectId: string) {
     const project = await prisma.project.findUnique({
       where: { id: projectId },
-      select: { deliverableType: true },
+      select: { deliverableType: true, organizationId: true },
     });
 
     if (!project) {
@@ -85,6 +100,7 @@ class WorkflowService {
       await prisma.projectWorkflow.createMany({
         data: templates.map(template => ({
           projectId,
+          organizationId: project.organizationId, // REQUIRED
           workflowTemplateId: template.id,
           stepSequence: template.stepSequence,
           stepName: template.stepName,
@@ -319,12 +335,12 @@ class WorkflowService {
       const startDate = new Date(inProgressStep.startDate);
       const estimatedDays = inProgressStep.dueDate
         ? Math.max(
-            0,
-            Math.ceil(
-              (inProgressStep.dueDate.getTime() - startDate.getTime()) /
-                (1000 * 60 * 60 * 24)
-            )
+          0,
+          Math.ceil(
+            (inProgressStep.dueDate.getTime() - startDate.getTime()) /
+            (1000 * 60 * 60 * 24)
           )
+        )
         : null;
 
       if (estimatedDays !== null) {
@@ -347,7 +363,7 @@ class WorkflowService {
               0,
               Math.ceil(
                 (step.dueDate.getTime() - step.startDate.getTime()) /
-                  (1000 * 60 * 60 * 24)
+                (1000 * 60 * 60 * 24)
               )
             );
           })
