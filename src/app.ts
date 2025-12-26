@@ -1,11 +1,10 @@
-// Express Application Setup - VERSIONE INIZIALE
+// Express Application Setup
 import express, { Express, Request, Response } from "express";
 import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
 import compression from "compression";
 import cookieParser from "cookie-parser";
-import rateLimit from "express-rate-limit";
 import { logStream } from "./utils/logger";
 import { errorHandler, notFoundHandler } from "./middleware/error.middleware";
 
@@ -16,59 +15,22 @@ import taskRoutes from './routes/tasks.routes';
 import clientRoutes from './routes/clients.routes';
 import dashboardRoutes from './routes/dashboard.routes';
 import userRoutes from './routes/users.routes';
-
-// Le altre routes verranno aggiunte man mano che le implementiamo
+// Document routes will be imported when controller is ready
 // import documentRoutes from './routes/documents.routes';
-// import reviewRoutes from './routes/reviews.routes';
-// import timeRoutes from './routes/time.routes';
-// import reportRoutes from './routes/reports.routes';
-// import notificationRoutes from './routes/notifications.routes';
 
 const app: Express = express();
 
-// Trust the first proxy to correctly read X-Forwarded-* headers in hosted environments
-// (required for express-rate-limit to identify clients behind a load balancer)
+// Trust proxy for load balancers
 app.set("trust proxy", 1);
 
 // Security middleware
 app.use(helmet());
 
-// CORS configuration
-const allowedOrigins = [
-  'http://localhost:3000',
-  'http://localhost:5173',
-  'http://localhost:5174',
-  'https://stackblitz.io',
-  /^https:\/\/.*\.stackblitz\.io$/,
-  /^https:\/\/.*\.webcontainer\.io$/,
-  /^https:\/\/.*\.local\.webcontainer\.io$/
-];
-
+// CORS configuration - Allow all for development/Stackblitz
 app.use(
   cors({
-    origin: (origin, callback) => {
-      // Allow requests with no origin (mobile apps, Postman, etc.)
-      if (!origin) return callback(null, true);
-      
-      // Check if origin is allowed
-      const isAllowed = allowedOrigins.some(allowed => {
-        if (typeof allowed === 'string') {
-          return allowed === origin;
-        }
-        return allowed.test(origin);
-      });
-      
-      if (isAllowed) {
-        callback(null, true);
-      } else {
-        console.warn('🚫 CORS blocked origin:', origin);
-        callback(new Error('Not allowed by CORS'));
-      }
-    },
+    origin: true,
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-    exposedHeaders: ['Content-Range', 'X-Content-Range']
   })
 );
 
@@ -85,14 +47,6 @@ app.use(cookieParser());
 // Compression middleware
 app.use(compression());
 
-// Rate limiting
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per windowMs
-  message: "Too many requests from this IP, please try again later.",
-});
-app.use("/api/", limiter);
-
 // Health check endpoint
 app.get("/health", (req: Request, res: Response) => {
   res.status(200).json({
@@ -102,15 +56,11 @@ app.get("/health", (req: Request, res: Response) => {
   });
 });
 
-// Root endpoint (aggiungi questo)
+// Root endpoint
 app.get('/', (req: Request, res: Response) => {
   res.status(200).json({
     message: 'TP Management API is running',
     version: '1.0.0',
-    endpoints: {
-      health: '/health',
-      auth: '/api/auth/*',
-    }
   });
 });
 
@@ -121,13 +71,7 @@ app.use('/api/tasks', taskRoutes);
 app.use('/api/clients', clientRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/users', userRoutes);
-
-// Le altre routes verranno decommentate quando le creeremo
 // app.use('/api/documents', documentRoutes);
-// app.use('/api/reviews', reviewRoutes);
-// app.use('/api/time-entries', timeRoutes);
-// app.use('/api/reports', reportRoutes);
-// app.use('/api/notifications', notificationRoutes);
 
 // 404 handler
 app.use(notFoundHandler);
