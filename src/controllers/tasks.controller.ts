@@ -13,6 +13,7 @@ class TasksController {
     const dueDate = req.body.dueDate ? new Date(req.body.dueDate) : undefined;
 
     const taskInput = {
+      organizationId: req.user!.organizationId,
       projectId: req.body.projectId,
       workflowStepId: req.body.workflowStepId || undefined,
       title: req.body.title,
@@ -33,7 +34,7 @@ class TasksController {
         : undefined,
     };
 
-    const task = await taskService.createTask(taskInput, req.user!.userId);
+    const task = await taskService.createTask(taskInput, req.user!.id);
 
     res.status(201).json({
       success: true,
