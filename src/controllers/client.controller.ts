@@ -12,7 +12,7 @@ class ClientController {
     const { active } = req.query;
     const activeOnly = active === 'true' || active === undefined;
 
-    const clients = await clientService.getAllClients(activeOnly);
+    const clients = await clientService.getAllClients(organizationId, activeOnly);
 
     res.json({
       success: true,
@@ -27,7 +27,9 @@ class ClientController {
   getClientById = asyncHandler(async (req: Request, res: Response) => {
     const { id } = req.params;
 
-    const client = await clientService.getClientById(id);
+    const organizationId = req.user!.organizationId;
+
+    const client = await clientService.getClientById(id, organizationId);
 
     res.json({
       success: true,
@@ -56,7 +58,9 @@ class ClientController {
   updateClient = asyncHandler(async (req: Request, res: Response) => {
     const { id } = req.params;
 
-    const client = await clientService.updateClient(id, req.body);
+    const organizationId = req.user!.organizationId;
+
+    const client = await clientService.updateClient(id, organizationId, req.body);
 
     res.json({
       success: true,
@@ -72,7 +76,9 @@ class ClientController {
   deleteClient = asyncHandler(async (req: Request, res: Response) => {
     const { id } = req.params;
 
-    await clientService.deleteClient(id);
+    const organizationId = req.user!.organizationId;
+
+    await clientService.deleteClient(id, organizationId);
 
     res.json({
       success: true,
@@ -87,7 +93,9 @@ class ClientController {
   getClientProjects = asyncHandler(async (req: Request, res: Response) => {
     const { id } = req.params;
 
-    const projects = await clientService.getClientProjects(id);
+    const organizationId = req.user!.organizationId;
+
+    const projects = await clientService.getClientProjects(id, organizationId);
 
     res.json({
       success: true,
