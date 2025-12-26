@@ -54,8 +54,14 @@ class AuthService {
     const passwordHash = await bcrypt.hash(input.password, authConfig.bcryptSaltRounds);
 
     // Create user
+    // Create organization and user (Simplified for Legacy Service Fix - Controller handles real logic)
+    const org = await prisma.organization.create({
+      data: { name: `${input.firstName}'s Organization` }
+    });
+
     const user = await prisma.user.create({
       data: {
+        organizationId: org.id,
         email: input.email.toLowerCase(),
         passwordHash,
         firstName: input.firstName,
