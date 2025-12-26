@@ -172,6 +172,7 @@ class TaskService {
     if (input.assignedTo && input.assignedTo !== createdBy) {
       await prisma.notification.create({
         data: {
+          organizationId: task.organizationId,
           userId: input.assignedTo,
           projectId: input.projectId,
           notificationType: 'task_assigned',
@@ -526,6 +527,7 @@ class TaskService {
     if (input.assignedTo && input.assignedTo !== existingTask.assignedTo) {
       await prisma.notification.create({
         data: {
+          organizationId: existingTask.organizationId,
           userId: input.assignedTo,
           projectId: existingTask.projectId,
           notificationType: 'task_assigned',
