@@ -1,85 +1,83 @@
-// Authentication and Authorization Middleware
-import { Request, Response, NextFunction } from "express";
-import { UserRole } from "@prisma/client";
-import { verifyAccessToken, TokenPayload, hasPermission } from "../config/auth";
-import { ApiError } from "../utils/errors";
+import { Request, Response, NextFunction } from 'express';
+import jwt from 'jsonwebtoken';
+import { PrismaClient } from '@prisma/client';
 
-// Extend Express Request to include user
+const prisma = new PrismaClient();
+
+// Interface for the JWT payload
+interface JwtPayload {
+  id: string;
+  email: string;
+  role: string;
+  organizationId: string;
+}
+
+// Extend Request type to include user
 declare global {
   namespace Express {
     interface Request {
-      user?: TokenPayload;
+      user?: JwtPayload;
     }
   }
 }
 
-/**
- * Middleware to verify JWT token and attach user to request
- */
-export const authenticate = (
-  req: Request,
-  res: Response,
-  next: NextFunction,
-) => {
+export const authenticate = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const authHeader = req.headers.authorization;
 
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      throw new ApiError(401, "No token provided");
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      res.status(401).json({ message: 'Authentication required. No token provided.' });
+      return;
     }
 
-    const token = authHeader.substring(7); // Remove 'Bearer '
-    const decoded = verifyAccessToken(token);
+    const token = authHeader.split(' ')[1];
 
-    req.user = decoded;
+    if (!process.env.JWT_SECRET) {
+      throw new Error('JWT_SECRET is not defined');
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET) as JwtPayload;
+
+    // Verify user exists and is active
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.id },
+      select: { id: true, email: true, role: true, organizationId: true, active: true }
+    });
+
+    if (!user || !user.active) {
+      res.status(401).json({ message: 'User not found or inactive.' });
+      return;
+    }
+
+    // Attach user to request
+    req.user = {
+      id: user.id,
+      email: user.email,
+      role: user.role,
+      organizationId: user.organizationId
+    };
+
     next();
   } catch (error) {
-    if (error instanceof ApiError) {
-      return next(error);
+    if (error instanceof jwt.TokenExpiredError) {
+      res.status(401).json({ message: 'Token expired.' });
+      return;
     }
-    return next(new ApiError(401, "Invalid or expired token"));
+    if (error instanceof jwt.JsonWebTokenError) {
+      res.status(401).json({ message: 'Invalid token.' });
+      return;
+    }
+    res.status(500).json({ message: 'Internal server error during authentication.' });
+    return;
   }
 };
 
-/**
- * Middleware to check if user has required role
- */
-export const authorize = (...roles: UserRole[]) => {
+export const authorize = (...roles: string[]) => {
   return (req: Request, res: Response, next: NextFunction) => {
-    if (!req.user) {
-      return next(new ApiError(401, "Authentication required"));
+    if (!req.user || !roles.includes(req.user.role)) {
+      res.status(403).json({ message: 'Forbidden: Insufficient permissions' });
+      return;
     }
-
-    const userRole = req.user.role;
-    const hasRequiredRole = roles.some((role) => hasPermission(userRole, role));
-
-    if (!hasRequiredRole) {
-      return next(new ApiError(403, "Insufficient permissions"));
-    }
-
     next();
   };
-};
-
-/**
- * Optional authentication - attaches user if token is valid, but doesn't fail if not
- */
-export const optionalAuth = (
-  req: Request,
-  res: Response,
-  next: NextFunction,
-) => {
-  try {
-    const authHeader = req.headers.authorization;
-
-    if (authHeader && authHeader.startsWith("Bearer ")) {
-      const token = authHeader.substring(7);
-      const decoded = verifyAccessToken(token);
-      req.user = decoded;
-    }
-  } catch (error) {
-    // Silently fail for optional auth
-  }
-
-  next();
 };
