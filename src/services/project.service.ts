@@ -5,6 +5,7 @@ import { NotFoundError, ValidationError, ForbiddenError } from '../utils/errors'
 import { workflowService } from './workflow.service';
 
 export interface CreateProjectInput {
+  organizationId: string;
   clientId: string;
   projectName: string;
   deliverableType: DeliverableType;
@@ -62,12 +63,12 @@ class ProjectService {
    * Create a new project with workflow
    */
   async createProject(input: CreateProjectInput, createdBy: string) {
-    // Validate client exists
+    // Validate client exists and belongs to organization
     const client = await prisma.client.findUnique({
       where: { id: input.clientId },
     });
 
-    if (!client) {
+    if (!client || client.organizationId !== input.organizationId) {
       throw new ValidationError('Client not found');
     }
 
@@ -83,6 +84,7 @@ class ProjectService {
     // Create project
     const project = await prisma.project.create({
       data: {
+        organizationId: input.organizationId,
         clientId: input.clientId,
         projectName: input.projectName,
         deliverableType: input.deliverableType,
@@ -139,6 +141,7 @@ class ProjectService {
     // Create activity log
     await prisma.activityLog.create({
       data: {
+        organizationId: input.organizationId,
         projectId: project.id,
         userId: createdBy,
         actionType: 'created',
@@ -214,6 +217,10 @@ class ProjectService {
     }
 
     // Check access permissions (unless admin/partner)
+    if (project.organizationId !== (await prisma.user.findUnique({ where: { id: userId } }))?.organizationId) {
+      throw new ForbiddenError('You do not have access to this project');
+    }
+
     if (userRole !== 'admin' && userRole !== 'partner') {
       const isTeamMember = project.projectTeam.some(
         member => member.userId === userId
@@ -233,8 +240,12 @@ class ProjectService {
   async getProjects(
     filters: ProjectFilters,
     pagination: PaginationOptions,
+    filters: ProjectFilters,
+    filters: ProjectFilters,
+    pagination: PaginationOptions,
     userId: string,
-    userRole: string
+    userRole: string,
+    organizationId: string
   ) {
     const page = pagination.page || 1;
     const limit = pagination.limit || 20;
@@ -243,7 +254,9 @@ class ProjectService {
     const sortOrder = pagination.sortOrder || 'desc';
 
     // Build where clause
-    const where: Prisma.ProjectWhereInput = {};
+    const where: Prisma.ProjectWhereInput = {
+      organizationId
+    };
 
     if (filters.clientId) {
       where.clientId = filters.clientId;
@@ -394,6 +407,7 @@ class ProjectService {
     // Log activity
     await prisma.activityLog.create({
       data: {
+        organizationId: existingProject.organizationId,
         projectId: project.id,
         userId,
         actionType: 'updated',
@@ -427,6 +441,7 @@ class ProjectService {
     // Log activity
     await prisma.activityLog.create({
       data: {
+        organizationId: project.organizationId,
         projectId,
         userId,
         actionType: 'deleted',
@@ -451,6 +466,7 @@ class ProjectService {
     // Log activity
     await prisma.activityLog.create({
       data: {
+        organizationId: project.organizationId,
         projectId,
         userId,
         actionType: 'status_changed',
