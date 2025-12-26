@@ -4,6 +4,7 @@ import { TaskStatus, Priority, Prisma } from '@prisma/client';
 import { NotFoundError, ValidationError, ForbiddenError } from '../utils/errors';
 
 export interface CreateTaskInput {
+  organizationId: string;
   projectId: string;
   workflowStepId?: string;
   title: string;
@@ -108,6 +109,7 @@ class TaskService {
     // Create task
     const task = await prisma.task.create({
       data: {
+        organizationId: input.organizationId,
         projectId: input.projectId,
         workflowStepId: input.workflowStepId,
         title: input.title,
@@ -156,6 +158,7 @@ class TaskService {
     // Create activity log
     await prisma.activityLog.create({
       data: {
+        organizationId: input.organizationId,
         projectId: input.projectId,
         userId: createdBy,
         actionType: 'created',
@@ -494,6 +497,7 @@ class TaskService {
     // Create activity log
     await prisma.activityLog.create({
       data: {
+        organizationId: existingTask.organizationId,
         projectId: existingTask.projectId,
         userId,
         actionType: 'updated',
@@ -507,6 +511,7 @@ class TaskService {
     if (input.status === TaskStatus.completed && existingTask.status !== TaskStatus.completed) {
       await prisma.activityLog.create({
         data: {
+          organizationId: existingTask.organizationId,
           projectId: existingTask.projectId,
           userId,
           actionType: 'task_completed',
@@ -554,9 +559,9 @@ class TaskService {
       },
     });
 
-    const dependentTasks = allProjectTasks.filter(t => 
-      t.dependencies && 
-      Array.isArray(t.dependencies) && 
+    const dependentTasks = allProjectTasks.filter(t =>
+      t.dependencies &&
+      Array.isArray(t.dependencies) &&
       (t.dependencies as string[]).includes(taskId)
     );
 
@@ -574,6 +579,7 @@ class TaskService {
     // Log activity
     await prisma.activityLog.create({
       data: {
+        organizationId: task.organizationId,
         projectId: task.projectId,
         userId,
         actionType: 'deleted',
