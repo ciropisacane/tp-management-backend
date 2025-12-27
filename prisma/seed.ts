@@ -13,7 +13,8 @@ const prisma = new PrismaClient();
 async function main() {
   console.log("🌱 Seeding database...");
 
-  // Clear existing data (optional - comment out if you want to preserve data)
+  // 1. PULIZIA DATI
+  // L'ordine è importante per via delle foreign keys
   await prisma.activityLog.deleteMany();
   await prisma.notification.deleteMany();
   await prisma.milestone.deleteMany();
@@ -22,19 +23,30 @@ async function main() {
   await prisma.review.deleteMany();
   await prisma.document.deleteMany();
   await prisma.task.deleteMany();
-  await prisma.projectWorkflow.deleteMany();
-  await prisma.projectTeam.deleteMany();
-  await prisma.project.deleteMany();
+  await prisma.projectTeam.deleteMany(); // Cancelliamo prima il team
+  await prisma.project.deleteMany();     // Poi i progetti
   await prisma.client.deleteMany();
   await prisma.workflowTemplate.deleteMany();
   await prisma.user.deleteMany();
+  await prisma.organization.deleteMany(); // Cancelliamo per ultima l'organizzazione
 
   console.log("✨ Cleared existing data");
+
+  // 2. CREAZIONE ORGANIZZAZIONE (Fondamentale per il multi-tenant)
+  const org = await prisma.organization.create({
+    data: {
+      name: "TP Management Demo Org",
+      // Aggiungi qui altri campi obbligatori se il tuo schema li richiede (es. vatNumber, address)
+      // vatNumber: "IT00000000000",
+    },
+  });
+
+  console.log(`🏢 Created Organization: ${org.name}`);
 
   // Hash password for all demo users
   const hashedPassword = await bcrypt.hash("password123", 10);
 
-  // Create Users
+  // 3. CREAZIONE UTENTI (Collegati all'Organizzazione)
   const users = await Promise.all([
     prisma.user.create({
       data: {
@@ -44,6 +56,7 @@ async function main() {
         lastName: "User",
         role: UserRole.admin,
         hourlyRate: 250,
+        organizationId: org.id, // <--- COLLEGAMENTO
       },
     }),
     prisma.user.create({
@@ -54,6 +67,7 @@ async function main() {
         lastName: "Partner",
         role: UserRole.partner,
         hourlyRate: 300,
+        organizationId: org.id, // <--- COLLEGAMENTO
       },
     }),
     prisma.user.create({
@@ -64,6 +78,7 @@ async function main() {
         lastName: "Manager",
         role: UserRole.manager,
         hourlyRate: 200,
+        organizationId: org.id, // <--- COLLEGAMENTO
       },
     }),
     prisma.user.create({
@@ -74,6 +89,7 @@ async function main() {
         lastName: "Senior",
         role: UserRole.senior,
         hourlyRate: 150,
+        organizationId: org.id, // <--- COLLEGAMENTO
       },
     }),
     prisma.user.create({
@@ -84,13 +100,16 @@ async function main() {
         lastName: "Consultant",
         role: UserRole.consultant,
         hourlyRate: 100,
+        organizationId: org.id, // <--- COLLEGAMENTO
       },
     }),
   ]);
 
   console.log(`✅ Created ${users.length} users`);
 
-  // Create Workflow Templates for Local File
+  // Create Workflow Templates
+  // NOTA: Se anche i template sono specifici per organizzazione nel tuo schema,
+  // aggiungi 'organizationId: org.id' anche qui sotto.
   const localFileSteps = [
     {
       name: "Project Intake",
@@ -158,11 +177,11 @@ async function main() {
         estimatedDurationHours: localFileSteps[i].estimatedHours,
         requiredInputs: localFileSteps[i].requiredInputs || [],
         outputs: localFileSteps[i].outputs || [],
+        // organizationId: org.id, // Scommenta se i template sono per organizzazione
       },
     });
   }
 
-  // Create Workflow Templates for Benchmark Analysis
   const benchmarkSteps = [
     { name: "Project Scoping", estimatedHours: 4 },
     { name: "Search Strategy", estimatedHours: 8 },
@@ -181,14 +200,16 @@ async function main() {
         deliverableType: DeliverableType.BENCHMARK_ANALYSIS.toString(),
         stepSequence: i + 1,
         stepName: benchmarkSteps[i].name,
+        stepDescription: benchmarkSteps[i].name, // Added description fallback
         estimatedDurationHours: benchmarkSteps[i].estimatedHours,
+        // organizationId: org.id, // Scommenta se i template sono per organizzazione
       },
     });
   }
 
   console.log("✅ Created workflow templates");
 
-  // Create Clients
+  // 4. CREAZIONE CLIENTI (Collegati all'Organizzazione)
   const clients = await Promise.all([
     prisma.client.create({
       data: {
@@ -198,6 +219,7 @@ async function main() {
         contactName: "Robert Johnson",
         contactEmail: "robert.j@acme.com",
         contactPhone: "+1-555-0101",
+        organizationId: org.id, // <--- COLLEGAMENTO
       },
     }),
     prisma.client.create({
@@ -208,6 +230,7 @@ async function main() {
         contactName: "Emma Wilson",
         contactEmail: "emma.w@techstart.com",
         contactPhone: "+44-20-7123-4567",
+        organizationId: org.id, // <--- COLLEGAMENTO
       },
     }),
     prisma.client.create({
@@ -218,17 +241,19 @@ async function main() {
         contactName: "Klaus Schmidt",
         contactEmail: "k.schmidt@globalpharma.de",
         contactPhone: "+49-30-12345678",
+        organizationId: org.id, // <--- COLLEGAMENTO
       },
     }),
   ]);
 
   console.log(`✅ Created ${clients.length} clients`);
 
-  // Create Projects
+  // 5. CREAZIONE PROGETTI (Collegati all'Organizzazione)
   const projects = await Promise.all([
     prisma.project.create({
       data: {
         clientId: clients[0].id,
+        organizationId: org.id, // <--- COLLEGAMENTO
         projectName: "FY2024 Local File",
         deliverableType: DeliverableType.LOCAL_FILE,
         status: ProjectStatus.ANALYSIS,
@@ -248,6 +273,7 @@ async function main() {
     prisma.project.create({
       data: {
         clientId: clients[1].id,
+        organizationId: org.id, // <--- COLLEGAMENTO
         projectName: "IP Transfer Benchmark Study",
         deliverableType: DeliverableType.BENCHMARK_ANALYSIS,
         status: ProjectStatus.DRAFTING,
@@ -266,6 +292,7 @@ async function main() {
     prisma.project.create({
       data: {
         clientId: clients[2].id,
+        organizationId: org.id, // <--- COLLEGAMENTO
         projectName: "Transfer Pricing Policy Update",
         deliverableType: DeliverableType.TP_POLICY,
         status: ProjectStatus.PLANNING,
@@ -286,6 +313,8 @@ async function main() {
   console.log(`✅ Created ${projects.length} projects`);
 
   // Create Project Teams
+  // Solitamente ProjectTeam NON ha organizationId perché eredita dal progetto,
+  // ma se il tuo schema lo richiede, aggiungi 'organizationId: org.id' anche qui.
   await prisma.projectTeam.createMany({
     data: [
       {
@@ -344,11 +373,12 @@ async function main() {
 
   console.log("✅ Created project teams");
 
-  // Create Tasks
+  // 6. CREAZIONE TASK (Collegati all'Organizzazione)
   await prisma.task.createMany({
     data: [
       {
         projectId: projects[0].id,
+        organizationId: org.id, // <--- COLLEGAMENTO
         title: "Complete FAR Analysis",
         description:
           "Perform functional, asset, and risk analysis for Acme Corp",
@@ -362,6 +392,7 @@ async function main() {
       },
       {
         projectId: projects[0].id,
+        organizationId: org.id, // <--- COLLEGAMENTO
         title: "Gather financial statements",
         description: "Collect FY2024 financial statements from client",
         assignedTo: users[4].id,
@@ -375,6 +406,7 @@ async function main() {
       },
       {
         projectId: projects[1].id,
+        organizationId: org.id, // <--- COLLEGAMENTO
         title: "Database search for comparables",
         description:
           "Search Orbis database for comparable IP licensing transactions",
@@ -391,11 +423,12 @@ async function main() {
 
   console.log("✅ Created tasks");
 
-  // Create Milestones
+  // 7. CREAZIONE MILESTONES (Collegati all'Organizzazione)
   await prisma.milestone.createMany({
     data: [
       {
         projectId: projects[0].id,
+        organizationId: org.id, // <--- COLLEGAMENTO
         milestoneName: "Data Collection Complete",
         dueDate: new Date("2024-02-15"),
         status: "completed",
@@ -403,12 +436,14 @@ async function main() {
       },
       {
         projectId: projects[0].id,
+        organizationId: org.id, // <--- COLLEGAMENTO
         milestoneName: "Draft Report Ready",
         dueDate: new Date("2024-03-15"),
         status: "pending",
       },
       {
         projectId: projects[1].id,
+        organizationId: org.id, // <--- COLLEGAMENTO
         milestoneName: "Benchmark Analysis Complete",
         dueDate: new Date("2024-02-25"),
         status: "pending",
@@ -418,12 +453,13 @@ async function main() {
 
   console.log("✅ Created milestones");
 
-  // Create Notifications
+  // 8. CREAZIONE NOTIFICHE (Collegati all'Organizzazione)
   await prisma.notification.createMany({
     data: [
       {
         userId: users[3].id,
         projectId: projects[0].id,
+        organizationId: org.id, // <--- COLLEGAMENTO
         notificationType: "task_assigned",
         title: "New Task Assigned",
         message: "You have been assigned to complete FAR Analysis",
@@ -433,6 +469,7 @@ async function main() {
       {
         userId: users[2].id,
         projectId: projects[1].id,
+        organizationId: org.id, // <--- COLLEGAMENTO
         notificationType: "deadline_approaching",
         title: "Deadline Approaching",
         message: "IP Transfer Benchmark Study deadline in 3 days",
