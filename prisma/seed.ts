@@ -36,7 +36,6 @@ async function main() {
   const org = await prisma.organization.create({
     data: {
       name: "TP Management Demo Org",
-      // Aggiungi qui altri campi obbligatori se il tuo schema li richiede (es. vatNumber, address)
       // vatNumber: "IT00000000000",
     },
   });
@@ -108,8 +107,6 @@ async function main() {
   console.log(`✅ Created ${users.length} users`);
 
   // Create Workflow Templates
-  // NOTA: Se anche i template sono specifici per organizzazione nel tuo schema,
-  // aggiungi 'organizationId: org.id' anche qui sotto.
   const localFileSteps = [
     {
       name: "Project Intake",
@@ -177,7 +174,7 @@ async function main() {
         estimatedDurationHours: localFileSteps[i].estimatedHours,
         requiredInputs: localFileSteps[i].requiredInputs || [],
         outputs: localFileSteps[i].outputs || [],
-        // organizationId: org.id, // Scommenta se i template sono per organizzazione
+        organizationId: org.id,
       },
     });
   }
